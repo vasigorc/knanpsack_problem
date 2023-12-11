@@ -1,5 +1,10 @@
+mod problem;
+
 use rstest::rstest;
-use rust_decimal::{prelude::FromPrimitive, Decimal};
+use rust_decimal::{
+    prelude::{FromPrimitive, ToPrimitive},
+    Decimal,
+};
 
 #[derive(Debug, Eq, Hash, PartialEq, Copy, Clone)]
 pub struct Clock {
@@ -15,6 +20,10 @@ impl Clock {
             weight: dec_weight,
             price: dec_price,
         })
+    }
+
+    pub fn weight_as_f32(&self) -> f32 {
+        self.weight.to_f32().unwrap_or_default()
     }
 }
 
@@ -55,42 +64,35 @@ impl Default for Knapsack {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::Knapsack;
+#[rstest]
+fn empty_knapsack_should_contain_no_clocks() {
+    let empty_knapsack = Knapsack::empty();
+    assert!(empty_knapsack.contents.is_empty())
+}
 
-    use super::*;
+#[rstest]
+fn filled_knapsack_should_contain_all_clocks_passed_at_construction() {
+    let clocks = vec![
+        Clock::from_f32(0.5, 19.99),
+        Clock::from_f32(0.75, 29.99),
+        Clock::from_f32(0.9, 39.99),
+    ];
 
-    #[rstest]
-    fn empty_knapsack_should_contain_no_clocks() {
-        let empty_knapsack = Knapsack::empty();
-        assert!(empty_knapsack.contents.is_empty())
-    }
+    let valid_clocks: Vec<_> = clocks.into_iter().map(Option::unwrap).collect();
 
-    #[rstest]
-    fn filled_knapsack_should_contain_all_clocks_passed_at_construction() {
-        let clocks = vec![
-            Clock::from_f32(0.5, 19.99),
-            Clock::from_f32(0.75, 29.99),
-            Clock::from_f32(0.9, 39.99),
-        ];
+    let filled_knapsack = Knapsack::from_clocks(&valid_clocks);
+    assert_eq!(&valid_clocks, filled_knapsack.get_contents());
+}
 
-        let valid_clocks: Vec<_> = clocks.into_iter().map(Option::unwrap).collect();
+#[rstest]
+fn one_should_be_able_to_add_clocks_to_contents_of_knapsack() {
+    let clock = Clock::from_f32(4.45, 2.29);
+    let updated_knapsack = clock
+        .map(|clock| Knapsack::from_clocks(&[clock]))
+        .unwrap_or_default();
 
-        let filled_knapsack = Knapsack::from_clocks(&valid_clocks);
-        assert_eq!(&valid_clocks, filled_knapsack.get_contents());
-    }
+    let expected_contents = clock.map_or_else(Vec::new, |clock| vec![clock]);
+    let actual_contents = updated_knapsack.get_contents();
 
-    #[rstest]
-    fn one_should_be_able_to_add_clocks_to_contents_of_knapsack() {
-        let clock = Clock::from_f32(4.45, 2.29);
-        let updated_knapsack = clock
-            .map(|clock| Knapsack::from_clocks(&[clock]))
-            .unwrap_or_default();
-
-        let expected_contents = clock.map_or_else(Vec::new, |clock| vec![clock]);
-        let actual_contents = updated_knapsack.get_contents();
-
-        assert_eq!(&expected_contents[..], actual_contents);
-    }
+    assert_eq!(&expected_contents[..], actual_contents);
 }

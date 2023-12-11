@@ -9,3 +9,6 @@ edition = "2021"
 rstest = "0.18.2"
 rust_decimal = "1.33"
 rust_decimal_macros = "1.33"
+
+[dev-dependencies]
+expectest = "0.12.0"
