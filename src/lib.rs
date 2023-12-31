@@ -1,46 +1,58 @@
 use rstest::rstest;
+use rust_decimal::{prelude::FromPrimitive, Decimal};
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, Hash, PartialEq, Copy, Clone)]
 pub struct Clock {
-    weight: f32,
-    price: f32,
+    pub weight: Decimal,
+    pub price: Decimal,
 }
 
 impl Clock {
-    pub fn new(weight: f32, price: f32) -> Clock {
-        Clock { weight, price }
+    pub fn from_f32(weight: f32, price: f32) -> Option<Clock> {
+        let dec_weight = Decimal::from_f32(weight)?;
+        let dec_price = Decimal::from_f32(price)?;
+        Some(Clock {
+            weight: dec_weight,
+            price: dec_price,
+        })
     }
 }
 
 pub struct Knapsack {
-  contents: Vec<Clock>,
+    contents: Vec<Clock>,
 }
 
 impl Knapsack {
-  pub fn from_clocks(clocks: &[Clock]) -> Knapsack {
-      Knapsack {
-          contents: clocks.iter().cloned().collect(),
-      }
-  }
+    pub fn from_clocks(clocks: &[Clock]) -> Knapsack {
+        Knapsack {
+            contents: clocks.iter().cloned().collect(),
+        }
+    }
 
-  pub fn empty() -> Knapsack {
-      Knapsack {
-          contents: Vec::new(),
-      }
-  }
+    pub fn empty() -> Knapsack {
+        Knapsack {
+            contents: Vec::new(),
+        }
+    }
 
-  pub fn get_contents(&self) -> &[Clock] {
-      &self.contents
-  }
+    pub fn get_contents(&self) -> &[Clock] {
+        &self.contents
+    }
 
-  pub fn add_clock(&self, clock: Clock) -> Knapsack {
-      let mut new_contents = self.contents.clone();
-      new_contents.push(clock);
+    pub fn add_clock(&self, clock: Clock) -> Knapsack {
+        let mut new_contents = self.contents.clone();
+        new_contents.push(clock);
 
-      Knapsack {
-          contents: new_contents,
-      }
-  }
+        Knapsack {
+            contents: new_contents,
+        }
+    }
+}
+
+impl Default for Knapsack {
+    fn default() -> Self {
+        Knapsack::empty()
+    }
 }
 
 #[cfg(test)]
@@ -58,24 +70,27 @@ mod tests {
     #[rstest]
     fn filled_knapsack_should_contain_all_clocks_passed_at_construction() {
         let clocks = vec![
-            Clock::new(0.5, 19.99),
-            Clock::new(0.75, 29.99),
-            Clock::new(0.9, 39.99),
+            Clock::from_f32(0.5, 19.99),
+            Clock::from_f32(0.75, 29.99),
+            Clock::from_f32(0.9, 39.99),
         ];
-        let filled_knapsack = Knapsack::from_clocks(&clocks);
-        assert_eq!(&clocks, filled_knapsack.get_contents());
+
+        let valid_clocks: Vec<_> = clocks.into_iter().map(Option::unwrap).collect();
+
+        let filled_knapsack = Knapsack::from_clocks(&valid_clocks);
+        assert_eq!(&valid_clocks, filled_knapsack.get_contents());
     }
 
     #[rstest]
     fn one_should_be_able_to_add_clocks_to_contents_of_knapsack() {
-      let knapsack = Knapsack::empty();
-      let clock = Clock::new(4.45, 2.29);
-      let updated_knapsack = knapsack.add_clock(clock);
+        let clock = Clock::from_f32(4.45, 2.29);
+        let updated_knapsack = clock
+            .map(|clock| Knapsack::from_clocks(&[clock]))
+            .unwrap_or_default();
 
-      
-      let expected_contents = vec![clock];
-      let actual_contents = updated_knapsack.get_contents();
+        let expected_contents = clock.map_or_else(Vec::new, |clock| vec![clock]);
+        let actual_contents = updated_knapsack.get_contents();
 
-      assert_eq!(&expected_contents[..], actual_contents);
+        assert_eq!(&expected_contents[..], actual_contents);
     }
 }
